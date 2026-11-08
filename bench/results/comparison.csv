@@ -1,0 +1,76 @@
+set,case,system,time_tolerance_s,answered,error_km,truth_rank_within_1500m,note
+field_recordings,bour_fs839494,dopplerdex,1800,False,,,no aircraft events detected
+field_recordings,bour_fs839494,hermes,1800,False,,,no events
+field_recordings,bour_fs839494,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,bru_ap77758,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,bru_ap77758,hermes,30,False,,,no events
+field_recordings,bru_ap77758,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,bru_ap82700,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,bru_ap82700,hermes,30,False,,,no events
+field_recordings,bru_ap82700,DOPPLERGEIST,30,False,,,inconclusive
+reference_challenge,colsto_challenge,dopplerdex,30,True,0.153,1,
+reference_challenge,colsto_challenge,hermes,30,True,17.758,,
+reference_challenge,colsto_challenge,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,edi_ap82914,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,edi_ap82914,hermes,30,False,,,no events
+field_recordings,edi_ap82914,DOPPLERGEIST,30,False,,,inconclusive
+eclipse_soundscapes,es681_19,dopplerdex,90,True,0.819,1,
+eclipse_soundscapes,es681_19,hermes,90,True,2.87,,
+eclipse_soundscapes,es681_19,DOPPLERGEIST,,False,,,not run on this set
+eclipse_soundscapes,es700_19,dopplerdex,90,True,7.247,,
+eclipse_soundscapes,es700_19,hermes,90,True,0.375,,
+eclipse_soundscapes,es700_19,DOPPLERGEIST,,False,,,not run on this set
+eclipse_soundscapes,es736_19,dopplerdex,90,True,0.105,1,
+eclipse_soundscapes,es736_19,hermes,90,True,3.709,,
+eclipse_soundscapes,es736_19,DOPPLERGEIST,,False,,,not run on this set
+eclipse_soundscapes,es755_20,dopplerdex,90,True,0.028,1,
+eclipse_soundscapes,es755_20,hermes,90,True,0.316,,
+eclipse_soundscapes,es755_20,DOPPLERGEIST,,False,,,not run on this set
+eclipse_soundscapes,es783_19,dopplerdex,90,True,5.95,2,
+eclipse_soundscapes,es783_19,hermes,90,True,3.889,,
+eclipse_soundscapes,es783_19,DOPPLERGEIST,,False,,,not run on this set
+eclipse_soundscapes,es783_21,dopplerdex,90,True,5.767,,
+eclipse_soundscapes,es783_21,hermes,90,False,,,no events
+eclipse_soundscapes,es783_21,DOPPLERGEIST,,False,,,not run on this set
+field_recordings,fai_ap84541,dopplerdex,30,True,5.582,4,
+field_recordings,fai_ap84541,hermes,30,True,11.887,,
+field_recordings,fai_ap84541,DOPPLERGEIST,30,False,,,no DOPPLERGEIST country profile mapped for this site
+field_recordings,gergueil_0427,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,gergueil_0427,hermes,30,False,,,no events
+field_recordings,gergueil_0427,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,hag_ap83009,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,hag_ap83009,hermes,30,False,,,no events
+field_recordings,hag_ap83009,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,lon_vp_ap85488,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,lon_vp_ap85488,hermes,30,False,,,no events
+field_recordings,lon_vp_ap85488,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,man_hg0903,dopplerdex,30,True,0.444,1,
+field_recordings,man_hg0903,hermes,30,True,0.254,,
+field_recordings,man_hg0903,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,man_hg0909,dopplerdex,30,True,0.541,1,
+field_recordings,man_hg0909,hermes,30,True,0.258,,
+field_recordings,man_hg0909,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,mco_0605,dopplerdex,1800,False,,,no aircraft events detected
+field_recordings,mco_0605,hermes,1800,False,,,no events
+field_recordings,mco_0605,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,muc_ap81998,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,muc_ap81998,hermes,30,False,,,no events
+field_recordings,muc_ap81998,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,muc_ap82011,dopplerdex,30,True,4.79,,
+field_recordings,muc_ap82011,hermes,30,True,13.025,,
+field_recordings,muc_ap82011,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,muc_ap82012,dopplerdex,30,False,,,no aircraft events detected
+field_recordings,muc_ap82012,hermes,30,False,,,no events
+field_recordings,muc_ap82012,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,pln_ap79888,dopplerdex,30,False,,,no hypothesis
+field_recordings,pln_ap79888,hermes,30,False,,,no events
+field_recordings,pln_ap79888,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,ram_fs807178,dopplerdex,30,True,15.742,,
+field_recordings,ram_fs807178,hermes,30,True,19.507,,
+field_recordings,ram_fs807178,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,yxy_0417,dopplerdex,1800,False,,,RuntimeError: no adsb.lol archive published for 2024-04-17 yet
+field_recordings,yxy_0417,hermes,1800,False,,,no events
+field_recordings,yxy_0417,DOPPLERGEIST,30,False,,,inconclusive
+field_recordings,yxy_0817,dopplerdex,1800,False,,,no aircraft events detected
+field_recordings,yxy_0817,hermes,1800,False,,,no events
+field_recordings,yxy_0817,DOPPLERGEIST,30,False,,,inconclusive

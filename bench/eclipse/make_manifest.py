@@ -21,8 +21,8 @@ def main() -> None:
                      "source": f"Eclipse Soundscapes ESID#{m['esid']} (zenodo {m['record']}, {m['license']})"})  # fmt: skip
         hermes.append({"id": cid, "audio": str(wav), "t0_unix": datetime.fromisoformat(m["start_utc"].replace("Z", "+00:00")).timestamp(),
                        "truth_lat": m["lat"], "truth_lon": m["lon"], "truth_unc_m": 50, "split": "eclipse"})  # fmt: skip
-    (ROOT / "bench/eclipse/manifest.json").write_text(json.dumps(ours, indent=1))
-    (ROOT / "bench/eclipse/manifest_hermes.json").write_text(json.dumps(hermes, indent=1))
+    (ROOT / "data/raw/eclipse/manifest.json").write_text(json.dumps(ours, indent=1))
+    (ROOT / "data/raw/eclipse/manifest_hermes.json").write_text(json.dumps(hermes, indent=1))
     print(len(ours), "clips")
 
 

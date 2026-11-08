@@ -2,7 +2,7 @@
 
 Source: Eclipse Soundscapes project, AudioMoth recorders deployed by volunteer data collectors during the
 2024 total solar eclipse; site coordinates and audio published by the project on Zenodo under
-**CC BY 4.0** (community `eclipsesoundscapes`; per-site records listed in `manifest.json`). Audio is not
+**CC BY 4.0** (community `eclipsesoundscapes`; per-site records listed in the generated `data/raw/eclipse/manifest.json`). Audio is not
 redistributed here: `fetch_clip.py` extracts one UTC hour per site straight from the Zenodo zips.
 
 Selection (before any audio was examined): `rank_sites.py` ranks site-hours by close ADS-B passes

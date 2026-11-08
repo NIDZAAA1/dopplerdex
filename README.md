@@ -35,6 +35,10 @@ On real recordings with independently known locations (details in [docs/BENCHMAR
 | Eclipse Soundscapes (US, 2024-04-08, published recorder coordinates) | 6 / 6 | 3 | 28 m |
 | Public field recordings (Freesound / radio aporee) + reference challenge | 6 / 19 | 3 | ~150 m |
 
+Compared with the other open-source implementations on the same recordings and protocol, dopplerdex
+answered 12 of 25 recordings with 6 within 1 km (hermes: 11 and 4; DOPPLERGEIST: 0). Full per-recording
+results and caveats: [docs/COMPARISON.md](docs/COMPARISON.md).
+
 Most failures are recordings with no aircraft close enough to hear, or aircraft that do not broadcast
 ADS-B. Read the limitations below before trusting a result.
 
