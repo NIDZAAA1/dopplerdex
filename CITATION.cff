@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use dopplerdex in research, please cite it as below."
+title: "dopplerdex: locating audio recordings from aircraft Doppler curves and ADS-B history"
+authors:
+  - family-names: Stamatovic
+    given-names: Nikola
+license: GPL-3.0-or-later
+repository-code: "https://github.com/NIDZAAA1/dopplerdex"
+type: software
+version: 0.1.0
+date-released: 2026-11-08
+keywords:
+  - acoustics
+  - Doppler
+  - ADS-B
+  - geolocation

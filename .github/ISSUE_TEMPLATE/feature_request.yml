@@ -1,0 +1,21 @@
+name: Feature or improvement
+description: Propose a new capability or an improvement to detection, search or the app
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing or not working well? Which recordings or situations does it affect?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed approach
+      description: How could it work? Physics, references, or examples are very welcome.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How would we measure it?
+      description: Which benchmark (bench/) or test would show the improvement, without overfitting one case?

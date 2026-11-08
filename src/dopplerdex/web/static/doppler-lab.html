@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Doppler Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: instrument bench — map + spectrum analyser side by side, control strip below; stacks on phones. */
+:root {
+  --bg: #0e141b;          /* blue-biased ink */
+  --panel: #151d27;
+  --line: #263241;
+  --fg: #e3e9ef;
+  --muted: #8a98a8;
+  --amber: #ffb547;       /* model curve / accent */
+  --cyan: #5fd4e6;        /* aircraft + ray */
+  --rose: #ff6b7d;        /* the "wrong" model */
+  --scope: #070b10;       /* analyser screen stays dark in both themes */
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eef2f6; --panel: #ffffff; --line: #d3dbe4; --fg: #13202c; --muted: #5b6b7c;
+    --amber: #c27400; --cyan: #0e8aa0; --rose: #d43450; --scope: #070b10; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eef2f6; --panel: #ffffff; --line: #d3dbe4; --fg: #13202c; --muted: #5b6b7c;
+  --amber: #c27400; --cyan: #0e8aa0; --rose: #d43450; --scope: #070b10; color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 22px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 14px; }
+h1 { font: 700 34px/1 var(--font-display); letter-spacing: .02em; margin: 0; text-transform: uppercase; }
+.sub { color: var(--muted); max-width: 70ch; margin: 0; }
+.bench { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 14px; }
+@media (max-width: 860px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.card h2 { font: 600 15px/1.2 var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; display: flex; justify-content: space-between; gap: 8px; }
+canvas { display: block; width: 100%; border-radius: 6px; touch-action: none; }
+#map { aspect-ratio: 1 / 1; background: var(--scope); cursor: grab; }
+#spec { aspect-ratio: 16 / 10; background: var(--scope); cursor: crosshair; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 12px var(--font-data); color: var(--muted); margin-top: 8px; }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px dashed; vertical-align: middle; margin-right: 6px; }
+.controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 18px; margin-top: 14px; }
+.ctl { display: grid; gap: 2px; min-width: 0; }
+.ctl label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.ctl output { font: 500 13px var(--font-data); color: var(--fg); font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--amber); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 13px; }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+button { font: 600 14px var(--font-body); background: var(--amber); color: #1a1205; border: 0; border-radius: 999px; padding: 8px 18px; cursor: pointer; }
+button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.readout { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+.readout div { border-top: 1px solid var(--line); padding-top: 6px; }
+.readout span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.readout b { font: 500 17px var(--font-data); font-variant-numeric: tabular-nums; }
+.note { color: var(--muted); font-size: 13px; max-width: 75ch; margin-top: 18px; }
+.note code { font-family: var(--font-data); font-size: 12px; }
+.status { font: 12px var(--font-data); color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Doppler Lab</h1>
+    <p class="sub">Drag the flight path. The page synthesises what a microphone at the star would record, using the same retarded-time physics as the locator, then draws the real spectrogram of that audio.</p>
+  </header>
+
+  <div class="bench">
+    <section class="card">
+      <h2><span>Top-down · 1 km rings</span><span class="status" id="mapStatus">drag the dots</span></h2>
+      <canvas id="map" aria-label="Map of the flight path around the microphone"></canvas>
+      <div class="legend">
+        <span><i style="border-color:var(--cyan);border-top-style:solid"></i>aircraft now</span>
+        <span><i style="border-color:var(--amber)"></i>where the sound you hear left from</span>
+        <span><i style="border-color:#9aa7b5"></i>closest approach</span>
+      </div>
+    </section>
+    <section class="card">
+      <h2><span>Spectrogram at the microphone</span><span class="status" id="specStatus"></span></h2>
+      <canvas id="spec" aria-label="Spectrogram of the simulated recording"></canvas>
+      <div class="legend">
+        <span><i style="border-color:var(--amber)"></i>physics model (emission time)</span>
+        <span><i style="border-color:var(--rose)"></i>naive model (ignores travel time)</span>
+        <span>click to seek</span>
+      </div>
+      <div class="bar">
+        <button id="play">Play</button>
+        <button class="ghost" id="reset">Reset path</button>
+        <div class="toggles">
+          <label><input type="checkbox" id="showModel" checked> model curves</label>
+          <label><input type="checkbox" id="showNaive"> naive model</label>
+          <label><input type="checkbox" id="ground" checked> ground reflection</label>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="controls card" style="margin-top:14px">
+    <div class="ctl"><label for="speed">Ground speed <output id="speedO"></output></label><input type="range" id="speed" min="20" max="160" step="1" value="90"></div>
+    <div class="ctl"><label for="alt0">Altitude at start <output id="alt0O"></output></label><input type="range" id="alt0" min="60" max="3000" step="10" value="900"></div>
+    <div class="ctl"><label for="alt1">Altitude at end <output id="alt1O"></output></label><input type="range" id="alt1" min="60" max="3000" step="10" value="900"></div>
+    <div class="ctl"><label for="f0">Blade-passing frequency f₀ <output id="f0O"></output></label><input type="range" id="f0" min="40" max="400" step="1" value="112"></div>
+    <div class="ctl"><label for="nh">Harmonics <output id="nhO"></output></label><input type="range" id="nh" min="1" max="8" step="1" value="5"></div>
+    <div class="ctl"><label for="wind">Wind speed <output id="windO"></output></label><input type="range" id="wind" min="0" max="25" step="1" value="0"></div>
+    <div class="ctl"><label for="windDir">Wind from <output id="windDirO"></output></label><input type="range" id="windDir" min="0" max="350" step="10" value="270"></div>
+    <div class="ctl"><label for="temp">Air temperature <output id="tempO"></output></label><input type="range" id="temp" min="-20" max="40" step="1" value="15"></div>
+    <div class="ctl"><label for="micH">Mic height <output id="micHO"></output></label><input type="range" id="micH" min="0.2" max="6" step="0.1" value="1.5"></div>
+    <div class="ctl"><label for="bb">Engine broadband <output id="bbO"></output></label><input type="range" id="bb" min="0" max="1" step="0.05" value="0.5"></div>
+    <div class="ctl"><label for="noise">Background noise <output id="noiseO"></output></label><input type="range" id="noise" min="0" max="1" step="0.05" value="0.3"></div>
+    <div class="ctl"><label for="fmax">Display up to <output id="fmaxO"></output></label><input type="range" id="fmax" min="300" max="3000" step="50" value="1000"></div>
+  </div>
+
+  <div class="readout card" style="margin-top:14px">
+    <div><span>CPA slant range</span><b id="rCpa">–</b></div>
+    <div><span>CPA horizontal</span><b id="hCpa">–</b></div>
+    <div><span>Heard CPA at</span><b id="tCpa">–</b></div>
+    <div><span>Approach / recede f₀</span><b id="fPlateau">–</b></div>
+    <div><span>Speed of sound</span><b id="cOut">–</b></div>
+    <div><span>Flight duration</span><b id="dur">–</b></div>
+  </div>
+
+  <p class="note">At any moment you hear sound that left the aircraft earlier, at the <em>emission time</em> <code>t_e</code>, solved from <code>t_r = t_e + |O − S(t_e)| / c</code> (with wind, the ray rides the moving air). The received frequency is <code>f = f₀ · (c + n·w) / (c + n·w − n·v)</code> evaluated at <code>t_e</code>. The rose curve uses the aircraft's state at the reception time instead: it is a different curve, not a delayed copy, which is why a naive model fails. With the ground reflection on, the broadband engine noise shows interference fringes whose spacing depends on mic height and elevation angle (Lloyd's mirror).</p>
+</div>
+
+<script>
+(() => {
+"use strict";
+const FS = 12000;               // synthesis sample rate (Hz)
+const MAP_HALF = 8000;          // map half-width (m)
+const DEFAULT_PTS = [[-7200, -2600], [-2600, -1300], [2200, 1100], [7200, 2500]];
+const $ = (id) => document.getElementById(id);
+const S = { pts: DEFAULT_PTS.map(p => p.slice()) };
+const ids = ["speed","alt0","alt1","f0","nh","wind","windDir","temp","micH","bb","noise","fmax"];
+const fmt = {
+  speed: v => `${v} m/s · ${Math.round(v*1.944)} kt`, alt0: v => `${v} m`, alt1: v => `${v} m`, f0: v => `${v} Hz`,
+  nh: v => `${v}`, wind: v => `${v} m/s`, windDir: v => `${v}°`, temp: v => `${v} °C`, micH: v => `${(+v).toFixed(1)} m`,
+  bb: v => `${Math.round(v*100)} %`, noise: v => `${Math.round(v*100)} %`, fmax: v => `${v} Hz`,
+};
+const P = () => Object.fromEntries(ids.map(k => [k, parseFloat($(k).value)]));
+
+// ---------- trajectory -------------------------------------------------------------------
+function catmull(pts, nPer = 80) {
+  const out = [];
+  const ext = [pts[0].map((v, i) => 2*v - pts[1][i]), ...pts, pts[pts.length-1].map((v, i) => 2*v - pts[pts.length-2][i])];
+  for (let i = 1; i < ext.length - 2; i++) {
+    const [p0, p1, p2, p3] = [ext[i-1], ext[i], ext[i+1], ext[i+2]];
+    for (let j = 0; j < nPer; j++) {
+      const t = j / nPer, t2 = t*t, t3 = t2*t;
+      out.push([0, 1].map(k => 0.5 * (2*p1[k] + (-p0[k]+p2[k])*t + (2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t2 + (-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t3)));
+    }
+  }
+  out.push(pts[pts.length-1].slice());
+  return out;
+}
+function buildTraj(p) {
+  const poly = catmull(S.pts);
+  const cum = [0];
+  for (let i = 1; i < poly.length; i++) cum.push(cum[i-1] + Math.hypot(poly[i][0]-poly[i-1][0], poly[i][1]-poly[i-1][1]));
+  const L = cum[cum.length-1], T = L / p.speed, dt = 0.25;
+  const n = Math.floor(T / dt) + 1;
+  const t = new Float64Array(n), x = new Float64Array(n), y = new Float64Array(n), z = new Float64Array(n);
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const s = Math.min(i * dt * p.speed, L);
+    while (j < cum.length - 2 && cum[j+1] < s) j++;
+    const f = (s - cum[j]) / Math.max(cum[j+1] - cum[j], 1e-9);
+    t[i] = i * dt; x[i] = poly[j][0] + f*(poly[j+1][0]-poly[j][0]); y[i] = poly[j][1] + f*(poly[j+1][1]-poly[j][1]);
+    z[i] = p.alt0 + (p.alt1 - p.alt0) * (s / L);
+  }
+  const vx = new Float64Array(n), vy = new Float64Array(n), vz = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(i-1, 0), b = Math.min(i+1, n-1), h = t[b] - t[a];
+    vx[i] = (x[b]-x[a])/h; vy[i] = (y[b]-y[a])/h; vz[i] = (z[b]-z[a])/h;
+  }
+  return { t, x, y, z, vx, vy, vz, dt, T, poly };
+}
+function state(tr, tq, out) { // linear interpolation + constant-velocity extrapolation
+  const n = tr.t.length;
+  let u = tq / tr.dt, i = Math.floor(u);
+  if (i < 0) i = 0; else if (i > n - 2) i = n - 2;
+  const f = u - i;
+  const vx = tr.vx[i] + f*(tr.vx[i+1]-tr.vx[i]), vy = tr.vy[i] + f*(tr.vy[i+1]-tr.vy[i]), vz = tr.vz[i] + f*(tr.vz[i+1]-tr.vz[i]);
+  const tc = Math.min(Math.max(tq, 0), tr.t[n-1]), ex = tq - tc;
+  const fc = Math.min(Math.max(tc / tr.dt - i, 0), 1);
+  out[0] = tr.x[i] + fc*(tr.x[i+1]-tr.x[i]) + ex*vx; out[1] = tr.y[i] + fc*(tr.y[i+1]-tr.y[i]) + ex*vy;
+  out[2] = tr.z[i] + fc*(tr.z[i+1]-tr.z[i]) + ex*vz; out[3] = vx; out[4] = vy; out[5] = vz;
+  return out;
+}
+
+// ---------- retarded-time solve ------------------------------------------------------------
+function solve(tr, O, trTimes, c, w) {
+  const m = trTimes.length, te = new Float64Array(m), dop = new Float64Array(m), rng = new Float64Array(m);
+  const ex = new Float64Array(m), ey = new Float64Array(m), ez = new Float64Array(m);
+  const st = new Float64Array(6), ww = w[0]*w[0] + w[1]*w[1], a = c*c - ww;
+  for (let k = 0; k < m; k++) {
+    let t = trTimes[k];
+    state(tr, t, st);
+    let dx = O[0]-st[0], dy = O[1]-st[1], dz = O[2]-st[2];
+    t -= Math.hypot(dx, dy, dz) / c;
+    let d = 1;
+    for (let it = 0; it < 12; it++) {
+      state(tr, t, st);
+      dx = O[0]-st[0]; dy = O[1]-st[1]; dz = O[2]-st[2];
+      const dw = dx*w[0] + dy*w[1], d2 = dx*dx + dy*dy + dz*dz;
+      const tau = (-dw + Math.sqrt(dw*dw + a*d2)) / a;
+      const nx = (dx - tau*w[0]) / (c*tau), ny = (dy - tau*w[1]) / (c*tau), nz = dz / (c*tau);
+      const nw = nx*w[0] + ny*w[1], nv = nx*st[3] + ny*st[4] + nz*st[5];
+      const g = t + tau - trTimes[k];
+      d = (c + nw) / (c + nw - nv);
+      t -= g * (c + nw) / (c + nw - nv);
+      if (Math.abs(g) < 1e-9) break;
+    }
+    state(tr, t, st);
+    te[k] = t; dop[k] = d; rng[k] = Math.hypot(O[0]-st[0], O[1]-st[1], O[2]-st[2]);
+    ex[k] = st[0]; ey[k] = st[1]; ez[k] = st[2];
+  }
+  return { te, dop, rng, ex, ey, ez };
+}
+function naive(tr, O, trTimes, c) {
+  const st = new Float64Array(6), out = new Float64Array(trTimes.length);
+  for (let k = 0; k < trTimes.length; k++) {
+    state(tr, trTimes[k], st);
+    const dx = O[0]-st[0], dy = O[1]-st[1], dz = O[2]-st[2], r = Math.hypot(dx, dy, dz);
+    out[k] = c / (c - (dx*st[3] + dy*st[4] + dz*st[5]) / r);
+  }
+  return out;
+}
+
+// ---------- synthesis ---------------------------------------------------------------------
+let rngSeed = 7;
+const rand = () => { rngSeed = (rngSeed * 1664525 + 1013904223) >>> 0; return rngSeed / 4294967296; };
+const gauss = () => { let u = 0, v = 0; while (u === 0) u = rand(); v = rand(); return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v); };
+
+function synth(p) {
+  const c = 331.3 * Math.sqrt(1 + p.temp / 273.15);
+  const dirTo = (p.windDir + 180) * Math.PI / 180;
+  const w = [p.wind * Math.sin(dirTo), p.wind * Math.cos(dirTo)];
+  const tr = buildTraj(p);
+  const O = [0, 0, p.micH], Oimg = [0, 0, -p.micH];
+  const dur = tr.T + 14, CT = 0.02, mC = Math.ceil(dur / CT) + 1;
+  const tc = new Float64Array(mC); for (let k = 0; k < mC; k++) tc[k] = k * CT;
+  const sd = solve(tr, O, tc, c, w), si = solve(tr, Oimg, tc, c, w);
+  const nv = naive(tr, O, tc, c);
+  const N = Math.floor(dur * FS), out = new Float32Array(N);
+  rngSeed = 7;
+  const nb = Math.floor((dur + 40) * FS), bbuf = new Float32Array(nb);
+  let lp = 0; for (let i = 0; i < nb; i++) { lp = 0.82*lp + 0.18*gauss(); bbuf[i] = lp; }
+  const amps = []; for (let h = 1; h <= p.nh; h++) amps.push(Math.pow(0.62, h - 1));
+  const paths = p.ground_on ? [[sd, 1.0], [si, 0.85]] : [[sd, 1.0]];
+  const valid = (te) => te >= 0 && te <= tr.T;
+  for (const [sol, R] of paths) {
+    for (let i = 0; i < N; i++) {
+      const tq = i / FS, u = tq / CT; let k = Math.floor(u); if (k >= mC - 1) k = mC - 2;
+      const f = u - k;
+      // cubic Hermite for t_e using its exact slope dt_e/dt_r = doppler
+      const t0 = sol.te[k], t1 = sol.te[k+1], m0 = sol.dop[k]*CT, m1 = sol.dop[k+1]*CT;
+      const f2 = f*f, f3 = f2*f;
+      const te = (2*f3-3*f2+1)*t0 + (f3-2*f2+f)*m0 + (-2*f3+3*f2)*t1 + (f3-f2)*m1;
+      if (!valid(te)) continue;
+      const r = sol.rng[k] + f*(sol.rng[k+1]-sol.rng[k]);
+      const fade = Math.min(1, te / 3, (tr.T - te) / 3);
+      const g = R * fade * 300 / r;
+      const ph = 2 * Math.PI * p.f0 * te;
+      let s = 0; for (let h = 0; h < amps.length; h++) s += amps[h] * Math.sin((h+1)*ph);
+      const bi = (te + 20) * FS, b0 = Math.floor(bi), bf = bi - b0;
+      s += p.bb * 2.2 * (bbuf[b0] + bf*(bbuf[b0+1]-bbuf[b0]));
+      out[i] += g * s;
+    }
+  }
+  let pk = 0; for (let i = 0; i < N; i++) pk = Math.max(pk, Math.abs(out[i]));
+  const noiseAmp = p.noise * 0.12;
+  let b = 0;
+  for (let i = 0; i < N; i++) { b = 0.97*b + 0.03*gauss(); out[i] = 0.85 * out[i] / (pk || 1) + noiseAmp * (0.5*gauss() + 4*b); }
+  let pk2 = 0; for (let i = 0; i < N; i++) pk2 = Math.max(pk2, Math.abs(out[i]));
+  for (let i = 0; i < N; i++) out[i] *= 0.9 / pk2;
+  return { audio: out, dur, tc, sd, nv, tr, c, w };
+}
+
+// ---------- FFT + spectrogram -------------------------------------------------------------
+function fftMag(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < len/2; j++) {
+        const ar = re[i+j], ai = im[i+j], br = re[i+j+len/2]*cr - im[i+j+len/2]*ci, bi = re[i+j+len/2]*ci + im[i+j+len/2]*cr;
+        re[i+j] = ar + br; im[i+j] = ai + bi; re[i+j+len/2] = ar - br; im[i+j+len/2] = ai - bi;
+        const t = cr*wr - ci*wi; ci = cr*wi + ci*wr; cr = t;
+      }
+    }
+  }
+}
+function spectrogram(x, fmax) {
+  const NF = 4096, hop = 512, win = new Float64Array(NF);
+  for (let i = 0; i < NF; i++) win[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/NF);
+  const nb = Math.min(NF/2, Math.ceil(fmax / (FS/NF)) + 1), frames = Math.max(1, Math.floor((x.length - NF) / hop));
+  const S = new Float32Array(nb * frames), re = new Float64Array(NF), im = new Float64Array(NF);
+  for (let fr = 0; fr < frames; fr++) {
+    const o = fr * hop;
+    for (let i = 0; i < NF; i++) { re[i] = x[o+i] * win[i]; im[i] = 0; }
+    fftMag(re, im);
+    for (let b = 0; b < nb; b++) S[b*frames + fr] = 10*Math.log10(re[b]*re[b] + im[b]*im[b] + 1e-12);
+  }
+  // whiten: subtract per-row median
+  const row = new Float32Array(frames);
+  for (let b = 0; b < nb; b++) {
+    for (let fr = 0; fr < frames; fr++) row[fr] = S[b*frames+fr];
+    const med = Float32Array.from(row).sort()[frames >> 1];
+    for (let fr = 0; fr < frames; fr++) S[b*frames+fr] -= med;
+  }
+  return { S, nb, frames, hop, NF, df: FS / NF };
+}
+const LUT = (() => { // magma-like ramp
+  const stops = [[0,[7,11,16]],[0.25,[52,18,90]],[0.5,[160,40,110]],[0.72,[240,96,70]],[0.88,[255,180,80]],[1,[255,246,200]]];
+  const lut = new Uint8ClampedArray(256*3);
+  for (let i = 0; i < 256; i++) {
+    const v = i/255; let k = 0; while (k < stops.length - 2 && stops[k+1][0] < v) k++;
+    const [a, ca] = stops[k], [b, cb] = stops[k+1], f = (v - a) / (b - a);
+    for (let j = 0; j < 3; j++) lut[i*3+j] = ca[j] + f*(cb[j]-ca[j]);
+  }
+  return lut;
+})();
+
+// ---------- drawing -----------------------------------------------------------------------
+const mapC = $("map"), specC = $("spec");
+let R = null, specImg = null, playT = null;
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function fit(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)) { cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return [ctx, w, h];
+}
+const toPx = (w, x, y) => [w/2 + x / MAP_HALF * w/2, w/2 - y / MAP_HALF * w/2];
+const toM = (w, px, py) => [(px - w/2) / (w/2) * MAP_HALF, -(py - w/2) / (w/2) * MAP_HALF];
+
+function drawMap() {
+  const [ctx, w] = fit(mapC);
+  ctx.fillStyle = "#070b10"; ctx.fillRect(0, 0, w, w);
+  ctx.strokeStyle = "rgba(140,160,180,.18)"; ctx.lineWidth = 1;
+  for (let r = 1000; r <= MAP_HALF*1.42; r += 1000) { ctx.beginPath(); ctx.arc(w/2, w/2, r / MAP_HALF * w/2, 0, 2*Math.PI); ctx.stroke(); }
+  ctx.fillStyle = "rgba(160,175,190,.6)"; ctx.font = "11px IBM Plex Mono, monospace";
+  for (const r of [2, 4, 6]) ctx.fillText(`${r} km`, w/2 + r*1000/MAP_HALF*w/2 + 3, w/2 - 3);
+  if (!R) return;
+  const p = P();
+  // path coloured by altitude
+  const tr = R.tr;
+  for (let i = 1; i < tr.t.length; i++) {
+    const a = (tr.z[i] - 60) / 2940;
+    ctx.strokeStyle = `hsl(${190 - a*150}, 70%, ${55 + a*10}%)`; ctx.lineWidth = 2.2;
+    const [x0, y0] = toPx(w, tr.x[i-1], tr.y[i-1]), [x1, y1] = toPx(w, tr.x[i], tr.y[i]);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  }
+  // CPA
+  let ki = 0; for (let k = 0; k < R.sd.rng.length; k++) if (R.sd.te[k] >= 0 && R.sd.te[k] <= tr.T && R.sd.rng[k] < R.sd.rng[ki]) ki = k;
+  const [cx, cy] = toPx(w, R.sd.ex[ki], R.sd.ey[ki]);
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = "#9aa7b5"; ctx.beginPath(); ctx.moveTo(w/2, w/2); ctx.lineTo(cx, cy); ctx.stroke(); ctx.setLineDash([]);
+  // control points
+  S.pts.forEach(([x, y], i) => { const [px, py] = toPx(w, x, y); ctx.fillStyle = i === drag ? css("--amber") : "#e3e9ef"; ctx.beginPath(); ctx.arc(px, py, 7, 0, 2*Math.PI); ctx.fill(); ctx.strokeStyle = "#070b10"; ctx.lineWidth = 2; ctx.stroke(); });
+  // direction arrow at end
+  const n = tr.t.length - 1, [ax, ay] = toPx(w, tr.x[n], tr.y[n]), [bx, by] = toPx(w, tr.x[n-4], tr.y[n-4]);
+  const an = Math.atan2(ay - by, ax - bx); ctx.fillStyle = "#e3e9ef"; ctx.beginPath();
+  ctx.moveTo(ax + 10*Math.cos(an), ay + 10*Math.sin(an)); ctx.lineTo(ax + 10*Math.cos(an+2.5), ay + 10*Math.sin(an+2.5)); ctx.lineTo(ax + 10*Math.cos(an-2.5), ay + 10*Math.sin(an-2.5)); ctx.fill();
+  // playback markers
+  if (playT !== null) {
+    const st = new Float64Array(6);
+    const k = Math.min(Math.floor(playT / 0.02), R.sd.te.length - 1), te = R.sd.te[k];
+    if (te >= 0 && te <= tr.T) {
+      const [ex, ey] = toPx(w, R.sd.ex[k], R.sd.ey[k]);
+      ctx.strokeStyle = css("--amber"); ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(w/2, w/2); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = css("--amber"); ctx.beginPath(); ctx.arc(ex, ey, 5, 0, 2*Math.PI); ctx.fill();
+    }
+    if (playT >= 0 && playT <= tr.T) {
+      state(tr, playT, st); const [nx, ny] = toPx(w, st[0], st[1]);
+      ctx.fillStyle = css("--cyan"); ctx.beginPath(); ctx.arc(nx, ny, 6, 0, 2*Math.PI); ctx.fill();
+    }
+  }
+  // mic
+  ctx.fillStyle = "#ffffff"; star(ctx, w/2, w/2, 9, 4);
+}
+function star(ctx, x, y, r1, r2) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? r2 : r1, a = -Math.PI/2 + i*Math.PI/5; ctx.lineTo(x + r*Math.cos(a), y + r*Math.sin(a)); } ctx.closePath(); ctx.fill(); }
+
+function buildSpecImage() {
+  const p = P(), sp = spectrogram(R.audio, p.fmax);
+  const img = new ImageData(sp.frames, sp.nb);
+  const lo = 0, hi = 24;
+  for (let b = 0; b < sp.nb; b++) for (let fr = 0; fr < sp.frames; fr++) {
+    const v = Math.max(0, Math.min(255, Math.round((sp.S[b*sp.frames+fr] - lo) / (hi - lo) * 255)));
+    const o = ((sp.nb - 1 - b) * sp.frames + fr) * 4;
+    img.data[o] = LUT[v*3]; img.data[o+1] = LUT[v*3+1]; img.data[o+2] = LUT[v*3+2]; img.data[o+3] = 255;
+  }
+  const off = document.createElement("canvas"); off.width = sp.frames; off.height = sp.nb; off.getContext("2d").putImageData(img, 0, 0);
+  specImg = { off, sp, fmax: (sp.nb - 1) * sp.df };
+}
+function drawSpec() {
+  const [ctx, w, h] = fit(specC);
+  ctx.fillStyle = "#070b10"; ctx.fillRect(0, 0, w, h);
+  if (!R || !specImg) return;
+  const padL = 44, padB = 22, pw = w - padL - 6, ph = h - padB - 6;
+  const { off, sp, fmax } = specImg;
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(off, padL, 6, pw, ph);
+  const t2x = (t) => padL + (t - sp.NF/2/FS) / (sp.frames * sp.hop / FS) * pw, f2y = (f) => 6 + ph - f / fmax * ph;
+  ctx.fillStyle = "rgba(200,210,220,.75)"; ctx.font = "11px IBM Plex Mono, monospace"; ctx.strokeStyle = "rgba(200,210,220,.15)";
+  const fStep = fmax > 1500 ? 500 : fmax > 600 ? 200 : 100;
+  for (let f = 0; f <= fmax; f += fStep) { const y = f2y(f); ctx.fillText(`${f}`, 4, y + 4); ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + pw, y); ctx.stroke(); }
+  const tStep = R.dur > 200 ? 60 : 30;
+  for (let t = 0; t <= R.dur; t += tStep) { const x = t2x(t); ctx.fillText(`${t}s`, x - 8, h - 6); }
+  const p = P(), tr = R.tr;
+  const curve = (arr, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.3; ctx.setLineDash(dash);
+    for (let hN = 1; hN <= p.nh; hN++) {
+      ctx.beginPath(); let on = false;
+      for (let k = 0; k < R.tc.length; k += 3) {
+        const te = R.sd.te[k]; if (te < 0 || te > tr.T) { on = false; continue; }
+        const f = hN * p.f0 * arr[k]; if (f > fmax) { on = false; continue; }
+        const x = t2x(R.tc[k]), y = f2y(f);
+        if (!on) { ctx.moveTo(x, y); on = true; } else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  };
+  if ($("showNaive").checked) curve(R.nv, css("--rose"), [5, 4]);
+  if ($("showModel").checked) curve(R.sd.dop, css("--amber"), [6, 5]);
+  if (playT !== null) { ctx.strokeStyle = css("--cyan"); ctx.lineWidth = 1.5; const x = t2x(playT); ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x, 6 + ph); ctx.stroke(); }
+  specImg.t2x = t2x; specImg.padL = padL; specImg.pw = pw;
+}
+
+// ---------- readouts ----------------------------------------------------------------------
+function readouts() {
+  const tr = R.tr; let ki = -1;
+  for (let k = 0; k < R.sd.rng.length; k++) if (R.sd.te[k] >= 0 && R.sd.te[k] <= tr.T && (ki < 0 || R.sd.rng[k] < R.sd.rng[ki])) ki = k;
+  const p = P(), v = p.speed;
+  $("rCpa").textContent = `${(R.sd.rng[ki]/1000).toFixed(2)} km`;
+  $("hCpa").textContent = `${(Math.hypot(R.sd.ex[ki], R.sd.ey[ki])/1000).toFixed(2)} km`;
+  $("tCpa").textContent = `${R.tc[ki].toFixed(1)} s`;
+  $("fPlateau").textContent = `${(p.f0/(1 - v/R.c)).toFixed(0)} / ${(p.f0/(1 + v/R.c)).toFixed(0)} Hz`;
+  $("cOut").textContent = `${R.c.toFixed(1)} m/s`;
+  $("dur").textContent = `${tr.T.toFixed(0)} s`;
+}
+
+// ---------- orchestration -----------------------------------------------------------------
+let pending = null;
+function recompute() {
+  stop();
+  const p = P(); p.ground_on = $("ground").checked;
+  $("specStatus").textContent = "rendering…";
+  if (pending) clearTimeout(pending);
+  pending = setTimeout(() => {
+    const t0 = performance.now();
+    R = synth(p); buildSpecImage(); readouts(); drawMap(); drawSpec();
+    $("specStatus").textContent = `${R.dur.toFixed(0)} s rendered in ${Math.round(performance.now() - t0)} ms`;
+  }, 30);
+}
+ids.forEach(k => { const el = $(k), o = $(k + "O"); const upd = () => { o.textContent = fmt[k](el.value); }; upd();
+  el.addEventListener("input", upd); el.addEventListener("change", k === "fmax" ? () => { if (R) { buildSpecImage(); drawSpec(); } } : recompute); });
+$("ground").addEventListener("change", recompute);
+$("showModel").addEventListener("change", drawSpec); $("showNaive").addEventListener("change", drawSpec);
+$("reset").addEventListener("click", () => { S.pts = DEFAULT_PTS.map(p => p.slice()); recompute(); });
+
+// dragging on the map
+let drag = -1;
+const evPos = (e) => { const r = mapC.getBoundingClientRect(); return toM(r.width, e.clientX - r.left, e.clientY - r.top); };
+mapC.addEventListener("pointerdown", (e) => {
+  const [x, y] = evPos(e), tol = MAP_HALF * 0.06;
+  drag = S.pts.findIndex(([px, py]) => Math.hypot(px - x, py - y) < tol);
+  if (drag >= 0) { mapC.setPointerCapture(e.pointerId); mapC.style.cursor = "grabbing"; }
+});
+mapC.addEventListener("pointermove", (e) => { if (drag < 0) return; const [x, y] = evPos(e);
+  S.pts[drag] = [Math.max(-MAP_HALF, Math.min(MAP_HALF, x)), Math.max(-MAP_HALF, Math.min(MAP_HALF, y))];
+  if (R) { R.tr = buildTraj(P()); drawMap(); } });
+const endDrag = () => { if (drag >= 0) { drag = -1; mapC.style.cursor = "grab"; recompute(); } };
+mapC.addEventListener("pointerup", endDrag); mapC.addEventListener("pointercancel", endDrag);
+
+// audio playback
+let actx = null, srcNode = null, startAt = 0, offset = 0, raf = 0;
+function stop() { if (srcNode) { try { srcNode.stop(); } catch (_) {} srcNode = null; } cancelAnimationFrame(raf); $("play").textContent = "Play"; }
+function play(from = 0) {
+  if (!R) return;
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  stop();
+  const buf = actx.createBuffer(1, R.audio.length, FS); buf.copyToChannel(R.audio, 0);
+  srcNode = actx.createBufferSource(); srcNode.buffer = buf; srcNode.connect(actx.destination);
+  offset = from; startAt = actx.currentTime; srcNode.start(0, from);
+  srcNode.onended = () => { if (srcNode) { srcNode = null; $("play").textContent = "Play"; } };
+  $("play").textContent = "Stop";
+  const tick = () => { playT = offset + (actx.currentTime - startAt); drawMap(); drawSpec(); if (srcNode) raf = requestAnimationFrame(tick); };
+  tick();
+}
+$("play").addEventListener("click", () => { if (srcNode) { stop(); } else play(playT && playT < R.dur - 1 ? playT : 0); });
+specC.addEventListener("click", (e) => { if (!specImg || !specImg.t2x) return; const r = specC.getBoundingClientRect();
+  const x = e.clientX - r.left, t = (x - specImg.padL) / specImg.pw * (specImg.sp.frames * specImg.sp.hop / FS) + specImg.sp.NF/2/FS;
+  playT = Math.max(0, Math.min(R.dur, t)); if (srcNode) play(playT); else { drawMap(); drawSpec(); } });
+window.addEventListener("resize", () => { drawMap(); drawSpec(); });
+recompute();
+})();
+</script>
+
+</html>

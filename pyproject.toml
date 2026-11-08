@@ -1,0 +1,82 @@
+[project]
+name = "dopplerdex"
+version = "0.1.0"
+description = "Locate where an audio recording was made from the Doppler curves of passing aircraft, matched against historical ADS-B flight tracks."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [
+    { name = "Nikola Stamatovic", email = "58033073+NIDZAAA1@users.noreply.github.com" }
+]
+keywords = ["acoustics", "doppler", "ads-b", "geolocation", "aircraft", "signal-processing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162.2",
+    "httpx>=0.28.1",
+    "matplotlib>=3.11.2",
+    "numba>=0.68.1",
+    "numpy>=2.5.4",
+    "orjson>=3.13.0",
+    "plotly>=7.1.0",
+    "polars>=2.1.0",
+    "pyarrow>=26.0.1",
+    "pydantic>=2.14.3",
+    "python-multipart>=0.0.33",
+    "pyyaml>=6.0.3",
+    "rasterio>=1.5.2",
+    "scipy>=1.18.1",
+    "soundfile>=0.14.0",
+    "typer>=0.28.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/NIDZAAA1/dopplerdex"
+Issues = "https://github.com/NIDZAAA1/dopplerdex/issues"
+
+[project.scripts]
+dopplerdex-web = "dopplerdex.web.app:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.15",
+    "pre-commit>=4.7.0",
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "pytest-benchmark>=5.3.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --benchmark-disable"
+markers = ["slow: long-running tests (simulation renders, e2e)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY", "SIM"]
+ignore = ["E741", "B008", "E501", "SIM108", "SIM117"]  # B008: frozen-dataclass config defaults are immutable
+
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "basic"
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E401", "E402", "I001", "F401", "B007", "B905"]

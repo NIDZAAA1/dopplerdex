@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dopplerdex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/static/vendor/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span>Dopplerdex</div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="locate" aria-selected="true">Locate</button>
+    <button role="tab" data-tab="learn">Learn</button>
+    <button role="tab" data-tab="data">Data</button>
+  </nav>
+  <div class="local" title="The app runs on this computer; recordings are never uploaded anywhere.">runs locally</div>
+</header>
+
+<!-- ========================= LOCATE ========================= -->
+<main id="tab-locate" class="tab">
+  <div class="locate-grid">
+    <section class="steps">
+
+      <article class="card step" id="step1">
+        <h2><span class="num">1</span>Recording &amp; context</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.ogg,.opus,.flac,.mp4,.mov" hidden>
+          <span class="drop-main" id="drop-main">Drop a recording here or click to choose</span>
+          <span class="drop-sub">Any audio or video file. Longer is better: 30-60 min catches several aircraft.</span>
+        </label>
+
+        <fieldset>
+          <legend>Where (roughly)</legend>
+          <div class="seg" role="radiogroup" id="where-mode">
+            <button type="button" data-v="continent" aria-pressed="true">Continent</button>
+            <button type="button" data-v="place" aria-pressed="false">Country / city</button>
+            <button type="button" data-v="bbox" aria-pressed="false">Custom box</button>
+          </div>
+          <div class="where-panel" data-for="continent">
+            <select id="continent"></select>
+          </div>
+          <div class="where-panel" data-for="place" hidden>
+            <div class="row"><input id="place" placeholder="e.g. Serbia, Belgrade, Texas, Lyon"><button type="button" class="ghost" id="geocode">Look up</button></div>
+            <div class="row"><label for="pad">Search margin around it</label><select id="pad"><option value="10">10 km</option><option value="30" selected>30 km</option><option value="100">100 km</option><option value="0">none</option></select></div>
+            <p class="hint" id="place-result">Type a place and look it up. Only the name you type is sent to OpenStreetMap.</p>
+          </div>
+          <div class="where-panel" data-for="bbox" hidden>
+            <div class="grid4"><input id="bb-s" placeholder="south lat"><input id="bb-n" placeholder="north lat"><input id="bb-w" placeholder="west lon"><input id="bb-e" placeholder="east lon"></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>When</legend>
+          <div class="grid3">
+            <label>Date<input type="date" id="date"></label>
+            <label>Start time (approx.)<input type="time" id="time"></label>
+            <label>± uncertainty<select id="unc"><option value="5">5 min</option><option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">1 h</option><option value="180">3 h</option><option value="day">whole day</option></select></label>
+          </div>
+          <label>Time zone (the offset your clock showed at the time)<select id="tz"></select></label>
+        </fieldset>
+
+        <details>
+          <summary>Setting and extra info (optional)</summary>
+          <div class="grid3">
+            <label>Microphone<select id="env"><option>outdoors</option><option>at an open window</option><option>at a closed window</option><option>indoors</option></select></label>
+            <label>Height above ground (m)<input id="height" type="number" step="0.5" placeholder="e.g. 1.5"></label>
+            <label>Air temperature (°C)<input id="temp" type="number" step="1" placeholder="15"></label>
+          </div>
+          <label>Notes<textarea id="notes" rows="2" placeholder="Anything you remember: aircraft heard, weather, device..."></textarea></label>
+        </details>
+
+        <details>
+          <summary>Known location, for testing only</summary>
+          <p class="hint">If you know where it was recorded and want to measure accuracy: the search never sees this, it is only compared with the answer afterwards.</p>
+          <div class="grid2"><input id="known-lat" placeholder="latitude"><input id="known-lon" placeholder="longitude"></div>
+        </details>
+
+        <div class="actions"><button id="btn-analyze" disabled>Check the audio</button><span class="status" id="s1-status">Choose a recording to start.</span></div>
+      </article>
+
+      <article class="card step" id="step2" aria-disabled="true">
+        <h2><span class="num">2</span>Audio check</h2>
+        <div class="progress" id="p2" hidden><div class="bar"></div><span class="msg"></span></div>
+        <div id="analysis" hidden>
+          <div class="verdict"><span class="pill" id="grade"></span><span id="grade-text"></span></div>
+          <ul class="reasons" id="reasons"></ul>
+          <ul class="tips" id="tips"></ul>
+          <div class="kpis" id="kpis"></div>
+          <img id="spec" alt="Spectrogram of the recording with detected aircraft curves">
+          <div class="table-wrap"><table id="events"></table></div>
+          <div class="data-line" id="data-line"></div>
+          <div class="estimate" id="estimate"></div>
+        </div>
+        <div class="actions"><button id="btn-search" disabled>Start the search</button><span class="status" id="s2-status"></span></div>
+      </article>
+
+      <article class="card step" id="step3" aria-disabled="true">
+        <h2><span class="num">3</span>Search</h2>
+        <div class="progress" id="p3" hidden><div class="bar"></div><span class="msg"></span></div>
+        <p class="hint" id="s3-hint">The search compares the recording with every flight in the area and time window, then checks each candidate against the whole recording.</p>
+      </article>
+    </section>
+
+    <section class="results card">
+      <h2>Results</h2>
+      <div id="map" aria-label="Map of the search area and candidate locations"></div>
+      <div class="legend"><span><i class="dot best"></i>best location</span><span><i class="dot cand"></i>other candidates</span><span><i class="line trk"></i>matched aircraft</span><span><i class="box"></i>search area</span><span><i class="dot known"></i>known location (testing)</span></div>
+      <div id="result-body"><p class="hint">Results appear here after the search. The map already shows the search area once you set the region.</p></div>
+    </section>
+  </div>
+</main>
+
+<!-- ========================= LEARN ========================= -->
+<main id="tab-learn" class="tab" hidden>
+  <article class="learn">
+    <h1>How a sound can reveal where it was recorded</h1>
+    <p class="lead">Aircraft engines and propellers produce steady tones. As a plane flies past, the pitch you hear slides down. The exact shape of that slide depends on where you stand relative to the plane's path, and every plane's path is published as ADS-B flight data. Match the shape, and you match the place.</p>
+
+    <section>
+      <h2>1. The Doppler effect</h2>
+      <p>Sound travels at about 340 m/s. When a source approaches, each new wave starts a little closer to you, so the waves arrive bunched up and the pitch is higher. When it moves away, they arrive stretched out and the pitch is lower. The received frequency is</p>
+      <p class="eq">f = f₀ · c / (c − v<sub>toward you</sub>)</p>
+      <p>where only the part of the aircraft's velocity pointing <em>toward you</em> counts. Directly overhead it moves sideways, so you hear exactly f₀.</p>
+      <div class="facts">
+        <div><b>Speed</b><span>sets how far the pitch drops: a faster plane drops further.</span></div>
+        <div><b>Distance</b><span>sets how quickly it drops: a close pass snaps down, a distant one glides.</span></div>
+        <div><b>Timing</b><span>sound needs time to reach you, so you hear each moment of the flight a few seconds late. Ignoring this produces a different curve, not just a shifted one.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Try it</h2>
+      <p>Drag the flight path, change the speed, altitude, wind and microphone height. The lab synthesises the sound with the same physics the locator uses, draws its spectrogram and plays it.</p>
+      <iframe class="lab" src="/static/doppler-lab.html" title="Interactive Doppler Lab" loading="lazy"></iframe>
+    </section>
+
+    <section>
+      <h2>3. From a recording to a location</h2>
+      <ol class="pipeline">
+        <li><b>Find the curves.</b> The spectrogram is cleaned of steady hums and broadband noise; sliding tones are tracked and grouped into harmonics. Each pass is fitted for speed, closest distance and the moment it was heard, with honest error bars. Loud broadband swells (jets) and road traffic are recognised separately.</li>
+        <li><b>Search every flight.</b> For each aircraft in the area and time window, the places that would have heard its closest approach form two thin strips beside its track. Two events must agree on the same place and the same recording start time; a fast join finds those agreements across millions of possibilities. With only one aircraft curve, the strips of every matching flight become candidates and the time window plus the rest of the recording decide between them, which is less certain.</li>
+        <li><b>Model the exact curve.</b> For the surviving places, the true flight path (turns, climbs, speed changes) predicts the exact pitch curve you would hear there, including travel time, wind and temperature. It is compared with the detected curves.</li>
+        <li><b>Check everything else.</b> At the right place, <em>every</em> aircraft must fit the recording: predicted loud passes must be loud, predicted propeller curves must be present, and nothing should be predicted that is clearly absent. This decides between look-alike candidates.</li>
+        <li><b>Refine.</b> The winner is optimised continuously with detailed terrain and weather. On the reference challenge this lands within tens of metres.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>4. What makes a recording locatable</h2>
+      <div class="facts">
+        <div><b>Length</b><span>30-60 minutes. More passes mean more constraints.</span></div>
+        <div><b>Stillness</b><span>Phone lying still, not in a hand or pocket. Handling noise hides faint curves.</span></div>
+        <div><b>Wind</b><span>Shelter the microphone; wind rumble masks the low tones that matter most.</span></div>
+        <div><b>Aircraft</b><span>Propeller planes within ~5 km, or jets within ~3 km at low altitude. Near an airport is ideal.</span></div>
+        <div><b>Time</b><span>Note the start time. A tight time window makes even a single pass useful.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. Limits and privacy</h2>
+      <p>The method needs aircraft that broadcast ADS-B. In Europe many light aircraft are not required to, and coverage at low altitude depends on volunteer receivers nearby. Short recordings, heavy wind or handling, and places far from any flight path often cannot be located. The confidence margin tells you how clearly the best answer beat the alternatives.</p>
+      <p>Everything runs on this computer. Use it only on recordings you made yourself or have permission to analyse: a precise location can reveal where someone lives.</p>
+    </section>
+  </article>
+</main>
+
+<!-- ========================= DATA ========================= -->
+<main id="tab-data" class="tab" hidden>
+  <div class="data-grid">
+    <article class="card">
+      <h2>Flight data on this computer</h2>
+      <p class="hint">Historical ADS-B from adsb.lol (open data, ODbL). Each day is ~4 GB worldwide; it is prepared per region (North America, Europe, World).</p>
+      <div class="table-wrap"><table id="ingested"></table></div>
+    </article>
+    <article class="card">
+      <h2>Prepare a day</h2>
+      <div class="grid2">
+        <label>Date (UTC)<input type="date" id="d-date"></label>
+        <label>Region<select id="d-store"><option value="north_america">North America</option><option value="europe">Europe</option><option value="world">World</option></select></label>
+      </div>
+      <div class="actions"><button class="ghost" id="d-check">Check availability</button><button id="d-prepare">Download &amp; prepare</button></div>
+      <p class="status" id="d-status"></p>
+      <div class="progress" id="pd" hidden><div class="bar"></div><span class="msg"></span></div>
+    </article>
+  </div>
+</main>
+
+<script src="/static/vendor/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

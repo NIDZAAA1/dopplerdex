@@ -1,0 +1,28 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach private recordings or reveal where a private recording was made.**
+        Describe the recording instead (length, device, environment), or link a public, openly licensed one.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps (command or web-app actions), what you expected, what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output / logs
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "macOS 15 / Ubuntu 24.04, Python 3.13, dopplerdex commit abc1234"
+    validations:
+      required: true

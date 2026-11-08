@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# NEVER COMMIT RECORDINGS. Audio and video stay on your machine.
+# (scripts/check_repo_hygiene.py enforces this in CI and in the pre-commit hook)
+# ---------------------------------------------------------------------------
+*.wav
+*.WAV
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.opus
+*.wma
+*.aif
+*.aiff
+*.caf
+*.amr
+*.3gp
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi
+
+# private ground truth (e.g. where you recorded) and local-only benchmark answers
+**/TRUTH*
+**/*.local.json
+**/*.private.*
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# downloaded / generated data (ADS-B archives, DEM, caches, analysis output)
+data/
+reference/
+videos/
+materials/
+bench/compare/runs/
+bench/**/results*.jsonl
+bench/**/*.log
+
+# test recordings: only manifests and attribution notes are versioned
+test_data/**
+!test_data/**/
+!test_data/**/manifest.json
+!test_data/**/ATTRIBUTION.md
+!test_data/**/README.md
+
+# environments / caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.benchmarks/
+.DS_Store

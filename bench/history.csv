@@ -1,0 +1,5 @@
+stamp,bench,tag,n,recall,fp_per_hour,v_rel_med,r_rel_med,t_med_s,cov2_v,cov2_r,cov2_t
+20261106T205104Z,detection,first,48,0.947,2.50,0.023,0.043,0.19,0.82,0.96,0.97
+20261106T205309Z,detection,known c,48,0.947,2.50,0.013,0.039,0.19,0.93,0.97,0.97
+20261106T205901Z,detection,single-line + running floor,48,0.921,2.50,0.018,0.041,0.20,0.73,0.80,0.81
+20261106T210325Z,detection,stitch+tierB+VIF,48,0.842,1.25,0.012,0.036,0.16,0.95,0.95,0.95

@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: repo-hygiene
+        name: no recordings / private data / secrets
+        entry: python scripts/check_repo_hygiene.py --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
